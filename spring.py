@@ -101,7 +101,7 @@ x_array = [pos[0][0] for pos in p_list]
 y_array = [pos[1][0] for pos in p_list]
 v_array = np.array(v_list)
 
-pprint(p_array)
+# pprint(p_array)
 
 # plot the position-time graph
 plt.subplot(212)
