@@ -18,6 +18,19 @@ void autopilot (void)
   // Autopilot to adjust the engine throttle, parachute and attitude control
 {
   // INSERT YOUR CODE HERE
+	double threshold = 0.9;
+	double kp = 10000, kh = 0.0187;
+	double pout = -kp * (0.5 + kh * (position.abs()-MARS_RADIUS) - velocity.abs());
+	if (pout <= -threshold) {
+		throttle = 0;
+	}
+	else if (pout >= 1 - threshold) {
+		throttle = 1;
+	}
+	else {
+		throttle = threshold + pout;
+	}
+		
 }
 
 void numerical_dynamics (void)
@@ -25,7 +38,21 @@ void numerical_dynamics (void)
   // lander's pose. The time step is delta_t (global variable).
 {
   // INSERT YOUR CODE HERE
-
+	vector3d gravity = - GRAVITY * MARS_MASS * (UNLOADED_LANDER_MASS + fuel * FUEL_CAPACITY * FUEL_DENSITY) * position.norm() / position.abs2();
+	vector3d thrust = thrust_wrt_world() * throttle;
+	double air_density = atmospheric_density(position);
+	vector3d drag;
+	switch (parachute_status) {
+		case 0: drag = -0.5 * air_density * DRAG_COEF_LANDER * LANDER_SIZE * LANDER_SIZE * M_PI * velocity.abs2() * velocity.norm();
+		case 1: drag = -0.5 * air_density * DRAG_COEF_LANDER * LANDER_SIZE * LANDER_SIZE * M_PI * velocity.abs2() * velocity.norm()
+					   -0.5 * air_density * DRAG_COEF_CHUTE * 5 * (2 * LANDER_SIZE) * (2 * LANDER_SIZE) * velocity.abs2() * velocity.norm();
+		case 2: drag = -0.5 * air_density * DRAG_COEF_LANDER * LANDER_SIZE * LANDER_SIZE * M_PI * velocity.abs2() * velocity.norm();
+	}
+	vector3d net_force = gravity + thrust + drag;
+	vector3d acceleration = net_force / (UNLOADED_LANDER_MASS + fuel * FUEL_CAPACITY * FUEL_DENSITY);
+	position += velocity * delta_t;
+	velocity += acceleration * delta_t;
+	
   // Here we can apply an autopilot to adjust the thrust, parachute and attitude
   if (autopilot_enabled) autopilot();
 
@@ -50,10 +77,10 @@ void initialize_simulation (void)
   scenario_description[3] = "polar launch at escape velocity (but drag prevents escape)";
   scenario_description[4] = "elliptical orbit that clips the atmosphere and decays";
   scenario_description[5] = "descent from 200km";
-  scenario_description[6] = "";
-  scenario_description[7] = "";
-  scenario_description[8] = "";
-  scenario_description[9] = "";
+  scenario_description[6] = "hyperbolic escape from the edge of the exosphere";
+  scenario_description[7] = "a descent from rest at 10km altitude with parachute deployed";
+  scenario_description[8] = "a descent from rest at 10km altitude with autopilot";
+  scenario_description[9] = "a descent from rest at the edge of the exosphere with autopilot";
 
   switch (scenario) {
 
@@ -124,16 +151,48 @@ void initialize_simulation (void)
     break;
 
   case 6:
-    break;
+	// hyperbolic escape from the edge of the exosphere
+	position = vector3d(0.0, 0.0, MARS_RADIUS + EXOSPHERE);
+	velocity = vector3d(0.0, 5000.0, 0);
+	orientation = vector3d(0.0, 0.0, 0.0);
+	delta_t = 0.1;
+	parachute_status = NOT_DEPLOYED;
+	stabilized_attitude = false;
+	autopilot_enabled = false;
+	break;
 
   case 7:
-    break;
+	// a descent from rest at 10km altitude with parachute deployed
+	position = vector3d(0.0, -(MARS_RADIUS + 10000), 0.0);
+	velocity = vector3d(0.0, 0.0, 0.0);
+	orientation = vector3d(0.0, 0.0, 90.0);
+	delta_t = 0.1;
+	parachute_status = DEPLOYED;
+	stabilized_attitude = true;
+	autopilot_enabled = false;
+	break;
 
   case 8:
-    break;
+	// a descent from rest at 10km altitude with autopilot
+	position = vector3d(0.0, -(MARS_RADIUS + 10000.0), 0.0);
+	velocity = vector3d(0.0, 0.0, 0.0);
+	orientation = vector3d(0.0, 0.0, 90.0);
+	delta_t = 0.1;
+	parachute_status = NOT_DEPLOYED;
+	stabilized_attitude = true;
+	autopilot_enabled = true;
+	break;
 
   case 9:
-    break;
+	// a descent from rest at the edge of the exosphere with autopilot
+	position = vector3d(0.0, -(MARS_RADIUS + EXOSPHERE), 0.0);
+	velocity = vector3d(0.0, 0.0, 0.0);
+	orientation = vector3d(0.0, 0.0, 90.0);
+	delta_t = 0.1;
+	parachute_status = NOT_DEPLOYED;
+	stabilized_attitude = true;
+	autopilot_enabled = true;
+	break;
 
   }
 }
