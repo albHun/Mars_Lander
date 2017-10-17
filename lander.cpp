@@ -13,6 +13,7 @@
 // ahg@eng.cam.ac.uk and gc121@eng.cam.ac.uk.
 
 #include "lander.h"
+#include <fstream>
 
 void autopilot (void)
   // Autopilot to adjust the engine throttle, parachute and attitude control
@@ -38,6 +39,7 @@ void numerical_dynamics (void)
   // lander's pose. The time step is delta_t (global variable).
 {
   // INSERT YOUR CODE HERE
+	
 	vector3d gravity = - GRAVITY * MARS_MASS * (UNLOADED_LANDER_MASS + fuel * FUEL_CAPACITY * FUEL_DENSITY) * position.norm() / position.abs2();
 	vector3d thrust = thrust_wrt_world() * throttle;
 	double air_density = atmospheric_density(position);
@@ -52,6 +54,11 @@ void numerical_dynamics (void)
 	vector3d acceleration = net_force / (UNLOADED_LANDER_MASS + fuel * FUEL_CAPACITY * FUEL_DENSITY);
 	position += velocity * delta_t;
 	velocity += acceleration * delta_t;
+	double centri_v = velocity * position / position.abs();
+	ofstream fout;
+	fout.open("Height_and_centripetal_velocity.txt", ios::app);
+	fout<<"Heihgt: "<<position.abs()-MARS_RADIUS<<" and centripetal velocity: "<< centri_v<<endl;
+	
 	
   // Here we can apply an autopilot to adjust the thrust, parachute and attitude
   if (autopilot_enabled) autopilot();
@@ -81,7 +88,7 @@ void initialize_simulation (void)
   scenario_description[7] = "a descent from rest at 10km altitude with parachute deployed";
   scenario_description[8] = "a descent from rest at 10km altitude with autopilot";
   scenario_description[9] = "a descent from rest at the edge of the exosphere with autopilot";
-
+	
   switch (scenario) {
 
   case 0:
